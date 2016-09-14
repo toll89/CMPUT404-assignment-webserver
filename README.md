@@ -5,7 +5,8 @@ CMPUT404-assignment-webserver
 
 See requirements.org (plain-text) for a description of the project.
 
-Make a simple webserver.
+The updated server.py is able to accept requests and respond with
+various files within a www directory.
 
 Contributors / Licensing
 ========================
@@ -16,6 +17,7 @@ server.py contains contributions from:
 
 * Abram Hindle
 * Eddie Antonio Santos
+* Jarrett Toll
 
 But the server.py example is derived from the python documentation
 examples thus some of the code is Copyright © 2001-2013 Python
@@ -24,6 +26,7 @@ compatible) http://docs.python.org/2/library/socketserver.html
 
 
 Modifications by Jarrett Toll:
+==============================
 
 References:
  * https://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html
