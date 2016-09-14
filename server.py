@@ -1,7 +1,9 @@
 #  coding: utf-8 
 import SocketServer
+import os
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2016 Jarrett Toll
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Jarrett Toll
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,13 +28,67 @@ import SocketServer
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-
 class MyWebServer(SocketServer.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall("OK")
+        if self.data:       
+            parsed = self.data.splitlines()
+            statusline = parsed[0]
+            statusSplit = statusline.split()
+            method, url, proto = statusline.split()
+        
+            if method == 'GET':
+                #Don't allow users to view previous directories. Only makes sense
+                #for malicious code.
+                if "../" in url:
+                    self.request.sendall("HTTP/1.1 404 Not Found\n")
+                    self.request.sendall("Content-Type: plain/text\n")
+                    self.request.sendall("Connection: close\n")
+
+                # Produce index
+                elif url == "/":
+                    self.request.sendall("HTTP/1.1 200 OK\n")
+                    self.request.sendall("Content-Type: text/html\n")
+                    self.request.sendall("Connection: close\n")
+                    self.request.sendall("\n")
+                    with open("www" + url + "index.html") as body:
+                        self.request.sendall(body.read())
+                
+                elif os.path.isdir("www" + url):
+                    # If a directory without a trailing "/" is requested,
+                    # redirect to same url with "/" appended.
+                    if url[-1:] != "/":
+                        self.request.sendall("HTTP/1.1 301 Redirection\n")
+                        self.request.sendall("Content-Type: text/html\n")
+                        self.request.sendall("Location: http://127.0.0.1:8080" + url + "/\n")
+                        self.request.sendall("Connection: close\n")
+
+                    # Produce the index.html of the directory
+                    else:
+                        if os.path.isfile("www" + url + "index.html"):
+                            self.request.sendall("HTTP/1.1 200 OK\n")
+                            self.request.sendall("Content-Type: text/html\n")
+                            self.request.sendall("\n")
+                            with open("www" + url + "index.html") as body:
+                                self.request.sendall(body.read())
+                # If we're given a filename directly, produce that file if it exists
+                elif os.path.isfile("www" + url):
+                    self.request.sendall("HTTP/1.1 200 OK\n")
+                    if url[-4:] == ".css":
+                        self.request.sendall("Content-Type: text/css\n")
+                    else:
+                        self.request.sendall("Content-Type: text/html\n")
+                    self.request.sendall("Connection: close\n")
+                    self.request.sendall("\n")
+                    with open("www" + url) as body:
+                        self.request.sendall(body.read())
+                # No resource at requested path/file, or forbidden.
+                else:
+                    self.request.sendall("HTTP/1.1 404 Not Found\n")
+                    self.request.sendall("Content-Type: plain/text\n")
+                    self.request.sendall("Connection: close\n")
+    
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
