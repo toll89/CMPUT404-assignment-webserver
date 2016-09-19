@@ -32,62 +32,65 @@ class MyWebServer(SocketServer.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
+        
+        def sendResponse( url, code, code_text, ctype, conn, location):
+            statusline = "HTTP/1.1 %s %s\r\n" % (code, code_text)
+            self.request.sendall(statusline)
+            if ctype:
+                self.request.sendall("Content-Type: %s\r\n" % ctype)
+            if location:
+                self.request.sendall("Location: %s\r\n" % location)
+            if conn:
+                self.request.sendall("Connection: %s\r\n" % conn)
+            self.request.sendall("\r\n")
+            if url:
+                with open(url) as body:
+                    self.request.sendall(body.read())
+        
         if self.data:       
             parsed = self.data.splitlines()
             statusline = parsed[0]
             statusSplit = statusline.split()
             method, url, proto = statusline.split()
-        
+            root = os.path.dirname(os.path.realpath(__file__)) + "/www"
             if method == 'GET':
-                #Don't allow users to view previous directories. Only makes sense
-                #for malicious code.
+                
+                #If using symbolic links, set URL to the real path.
                 if "../" in url:
-                    self.request.sendall("HTTP/1.1 404 Not Found\n")
-                    self.request.sendall("Content-Type: plain/text\n")
-                    self.request.sendall("Connection: close\n")
+                    url = os.path.realpath(url)
 
                 # Produce index
-                elif url == "/":
-                    self.request.sendall("HTTP/1.1 200 OK\n")
-                    self.request.sendall("Content-Type: text/html\n")
-                    self.request.sendall("Connection: close\n")
-                    self.request.sendall("\n")
-                    with open("www" + url + "index.html") as body:
-                        self.request.sendall(body.read())
+                if url == "/":
+                    sendResponse("www" + url + "index.html", 
+                            "200", "OK", "text/html", "close", None)
                 
-                elif os.path.isdir("www" + url):
+                elif os.path.isdir(root + url):
                     # If a directory without a trailing "/" is requested,
                     # redirect to same url with "/" appended.
                     if url[-1:] != "/":
-                        self.request.sendall("HTTP/1.1 301 Redirection\n")
-                        self.request.sendall("Content-Type: text/html\n")
-                        self.request.sendall("Location: http://127.0.0.1:8080" + url + "/\n")
-                        self.request.sendall("Connection: close\n")
+                        location = "http://127.0.0.1:8080" + url + "/"
+                        sendResponse(None, "301", "Redirection", "text/html", 
+                                "close", location)
 
                     # Produce the index.html of the directory
                     else:
-                        if os.path.isfile("www" + url + "index.html"):
-                            self.request.sendall("HTTP/1.1 200 OK\n")
-                            self.request.sendall("Content-Type: text/html\n")
-                            self.request.sendall("\n")
-                            with open("www" + url + "index.html") as body:
-                                self.request.sendall(body.read())
+                        if os.path.isfile(root + url + "index.html"):
+                            sendResponse("www" + url + "index.html", "200",
+                                    "OK", "text/html", "close", None)
+
                 # If we're given a filename directly, produce that file if it exists
-                elif os.path.isfile("www" + url):
-                    self.request.sendall("HTTP/1.1 200 OK\n")
+                elif os.path.isfile(root + url):
                     if url[-4:] == ".css":
-                        self.request.sendall("Content-Type: text/css\n")
+                        sendResponse("www" + url, "200", "OK", "text/css",
+                                "close", None)
                     else:
-                        self.request.sendall("Content-Type: text/html\n")
-                    self.request.sendall("Connection: close\n")
-                    self.request.sendall("\n")
-                    with open("www" + url) as body:
-                        self.request.sendall(body.read())
+                        sendResponse("www" + url, "200", "OK", "text/html",
+                                "close", None)
+
                 # No resource at requested path/file, or forbidden.
                 else:
-                    self.request.sendall("HTTP/1.1 404 Not Found\n")
-                    self.request.sendall("Content-Type: plain/text\n")
-                    self.request.sendall("Connection: close\n")
+                    sendResponse(None, "404", "Not Found", "plain/text",
+                        "close", None)
     
 
 if __name__ == "__main__":
