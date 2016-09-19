@@ -33,6 +33,11 @@ References:
  * http://stackoverflow.com/questions/3758147/easiest-way-to-read-write-a-files-content-in-python
     * Referenced User "ibz"'s code when figuring out how to read/send the contents of a file in python.
 
+Collaboration
+=============
+
+Although I did not work directly with anyone on the assignment, I did discuss various areas of the assignment with
+Peter Sterline and Mate Verunica.
 
 
 
